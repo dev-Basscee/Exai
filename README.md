@@ -108,3 +108,21 @@ cd backend
 .venv\Scripts\python.exe -m pytest tests/ -v
 ```
 All 5 test suites pass with 100% success rate.
+
+---
+
+## Moving the Database to Supabase
+
+1. In your **Supabase Dashboard**, open **Project Settings** -> **Database** and copy your **Connection URI** (use port `6543` for connection pooling or port `5432` for direct).
+2. Paste the URI into `backend/.env`:
+   ```env
+   DATABASE_URL="postgresql+asyncpg://postgres.your-project-ref:your-db-password@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
+   ```
+3. Initialize the schema:
+   - **Automatic**: Run the backend — tables and indexes are created automatically on startup.
+   - **Or in Dashboard**: Paste `supabase_schema.sql` into the Supabase SQL Editor and click **Run**.
+4. Migrate existing SQLite data (optional):
+   ```powershell
+   cd backend
+   uv run python migrate_sqlite_to_supabase.py
+   ```

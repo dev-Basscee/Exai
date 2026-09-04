@@ -1,22 +1,33 @@
 {
+  "name": "ExamPredict AI",
   "short_name": "ExamPredict",
-  "name": "ExamPredict AI — Study Companion",
-  "description": "Predict likely exam questions with syllabus-grounded explanations powered by AI.",
+  "description": "Your warm, intelligent study companion predicting likely exam questions with syllabus-grounded explanations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF8F5",
+  "theme_color": "#FAF8F5",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' fill='%23FAF8F5'><rect width='192' height='192' rx='48' fill='%23F59E0B'/><path d='M48 144V48a16 16 0 0 1 16-16h80v128H64a16 16 0 0 1-16-16Z' fill='%23FFFBEB'/><path d='m80 92 20 20 40-40' stroke='%23D97706' stroke-width='14' stroke-linecap='round' stroke-linejoin='round'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23FAF8F5'><rect width='512' height='512' rx='128' fill='%23F59E0B'/><path d='M128 384V128a32 32 0 0 1 32-32h224v320H160a32 32 0 0 1-32-32Z' fill='%23FFFBEB'/><path d='m210 240 50 50 110-110' stroke='%23D97706' stroke-width='36' stroke-linecap='round' stroke-linejoin='round'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
-  "background_color": "#0f172a",
-  "theme_color": "#4f46e5",
-  "display": "standalone",
-  "orientation": "portrait"
+  "categories": ["education", "productivity", "study"],
+  "shortcuts": [
+    {
+      "name": "Quick Predict",
+      "short_name": "Predict",
+      "description": "Run exam prediction on your active course",
+      "url": "/?action=predict"
+    }
+  ]
 }

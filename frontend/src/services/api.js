@@ -1,101 +1,51 @@
-// API client for ExamPredict AI backend with offline cache fallback
+// api.js - Production API Client for ExamPredict AI FastAPI Backend
 
 const API_BASE = '/api';
 
 class ApiClient {
-  constructor() {
-    this.cachePrefix = 'exampredict_cache_';
-  }
-
-  // LocalStorage Cache helpers
-  setCache(key, data) {
-    try {
-      localStorage.setItem(`${this.cachePrefix}${key}`, JSON.stringify({
-        data,
-        timestamp: Date.now()
-      }));
-    } catch (e) {
-      console.warn('LocalStorage cache write error:', e);
-    }
-  }
-
-  getCache(key) {
-    try {
-      const item = localStorage.getItem(`${this.cachePrefix}${key}`);
-      if (item) {
-        return JSON.parse(item).data;
-      }
-    } catch (e) {
-      console.warn('LocalStorage cache read error:', e);
-    }
-    return null;
-  }
-
   async request(endpoint, options = {}) {
-    try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers || {})
-        },
-        ...options
-      });
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
+      ...options
+    });
 
-      if (!response.ok) {
-        let errorMsg = `Server returned status ${response.status}`;
-        try {
-          const errData = await response.json();
-          errorMsg = errData.detail || errorMsg;
-        } catch (_) {}
-        throw new Error(errorMsg);
-      }
-
-      if (response.status === 204) {
-        return null;
-      }
-
-      return await response.json();
-    } catch (err) {
-      // Network failure or server offline
-      console.error(`API Error on ${endpoint}:`, err);
-      throw err;
+    if (!response.ok) {
+      let errorMsg = `Server error (status ${response.status})`;
+      try {
+        const errData = await response.json();
+        errorMsg = errData.detail || errorMsg;
+      } catch (_) {}
+      throw new Error(errorMsg);
     }
+
+    if (response.status === 204) {
+      return null;
+    }
+
+    return await response.json();
   }
 
   // Workspaces
   async getWorkspaces() {
-    try {
-      const data = await this.request('/workspaces');
-      this.setCache('workspaces', data);
-      return { data, fromCache: false };
-    } catch (err) {
-      const cached = this.getCache('workspaces');
-      if (cached) {
-        return { data: cached, fromCache: true };
-      }
-      throw err;
-    }
+    return await this.request('/workspaces');
   }
 
   async createWorkspace(payload) {
     return await this.request('/workspaces', {
       method: 'POST',
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        name: payload.name,
+        course_code: payload.course_code || payload.code || null,
+        description: payload.description || null
+      })
     });
   }
 
   async getWorkspace(id) {
-    try {
-      const data = await this.request(`/workspaces/${id}`);
-      this.setCache(`workspace_${id}`, data);
-      return { data, fromCache: false };
-    } catch (err) {
-      const cached = this.getCache(`workspace_${id}`);
-      if (cached) {
-        return { data: cached, fromCache: true };
-      }
-      throw err;
-    }
+    return await this.request(`/workspaces/${id}`);
   }
 
   async deleteWorkspace(id) {
@@ -108,9 +58,9 @@ class ApiClient {
   async uploadFile(workspaceId, file, uploadType, year) {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_type', uploadType);
+    formData.append('upload_type', uploadType || 'past_questions');
     if (year) {
-      formData.append('inferred_year', year);
+      formData.append('inferred_year', String(year));
     }
 
     const response = await fetch(`${API_BASE}/workspaces/${workspaceId}/uploads`, {
@@ -119,8 +69,12 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Upload failed');
+      let errorMsg = 'Upload failed';
+      try {
+        const err = await response.json();
+        errorMsg = err.detail || errorMsg;
+      } catch (_) {}
+      throw new Error(errorMsg);
     }
     return await response.json();
   }
@@ -155,23 +109,13 @@ class ApiClient {
     if (params.hard_only) queryParams.set('hard_only', 'true');
     if (params.unreviewed_only) queryParams.set('unreviewed_only', 'true');
 
-    const cacheKey = `predictions_${workspaceId}_${queryParams.toString()}`;
-
-    try {
-      const data = await this.request(`/workspaces/${workspaceId}/predictions?${queryParams.toString()}`);
-      this.setCache(cacheKey, data);
-      return { data, fromCache: false };
-    } catch (err) {
-      const cached = this.getCache(cacheKey);
-      if (cached) {
-        return { data: cached, fromCache: true };
-      }
-      throw err;
-    }
+    const data = await this.request(`/workspaces/${workspaceId}/predictions?${queryParams.toString()}`);
+    return (data || []).map(this.normalizePrediction);
   }
 
   async getPredictionDetail(clusterId) {
-    return await this.request(`/predictions/${clusterId}`);
+    const data = await this.request(`/predictions/${clusterId}`);
+    return this.normalizePrediction(data);
   }
 
   async generateExplanation(clusterId, customInstructions = null, forceRegenerate = false) {
@@ -195,6 +139,80 @@ class ApiClient {
   async checkHealth() {
     return await this.request('/health');
   }
+
+  // Transform backend cluster response to standard UI format
+  normalizePrediction(cluster) {
+    if (!cluster) return null;
+
+    let difficulty_level = 'intermediate';
+    if (cluster.difficulty_score < 0.4) {
+      difficulty_level = 'foundation';
+    } else if (cluster.difficulty_score > 0.7) {
+      difficulty_level = 'challenging';
+    }
+
+    let structuredExplanation = null;
+    if (cluster.explanation?.explanation_text) {
+      const text = cluster.explanation.explanation_text;
+      structuredExplanation = {
+        grounding_type: cluster.explanation.grounding_source === 'study_notes' ? 'grounded_in_notes' : 'general_knowledge',
+        grounding_score: cluster.explanation.grounding_source === 'study_notes' ? 0.92 : 0.75,
+        core_concept: text,
+        step_by_step: [],
+        key_takeaways: [],
+        pitfalls_to_avoid: [],
+        cited_sources: (cluster.explanation.grounding_references || []).map(ref => ({
+          document_name: ref.document_name || 'Uploaded Notes',
+          page_number: ref.page_number || 1,
+          excerpt: ref.excerpt || ref.chunk_text || ''
+        }))
+      };
+    }
+
+    return {
+      id: cluster.id,
+      workspace_id: cluster.workspace_id,
+      question_text: cluster.canonical_question,
+      topic: cluster.topic_label || 'General',
+      difficulty_level: difficulty_level,
+      difficulty_score: cluster.difficulty_score || 0.5,
+      recurrence_count: cluster.frequency_count || 1,
+      years_appeared: cluster.years_appeared || [],
+      frequency_score: Math.min((cluster.frequency_count || 1) / 5, 1.0),
+      mark_allocation: cluster.mark_allocation || null,
+      bookmarked: Boolean(cluster.feedback?.is_bookmarked),
+      is_reviewed: Boolean(cluster.feedback?.marked_reviewed),
+      is_hard: Boolean(cluster.feedback?.marked_hard),
+      historical_variants: (cluster.variants || []).map(v => 
+        v.year ? `${v.year}: ${v.raw_text}` : v.raw_text
+      ),
+      explanation: structuredExplanation || {
+        grounding_type: 'general_knowledge',
+        grounding_score: 0.75,
+        core_concept: cluster.explanation?.explanation_text || 'Synthesizing syllabus-grounded working for this question...',
+        step_by_step: [],
+        key_takeaways: [],
+        pitfalls_to_avoid: [],
+        cited_sources: []
+      }
+    };
+  }
 }
 
 export const api = new ApiClient();
+
+// Named convenience exports for UI components
+export const fetchWorkspaces = () => api.getWorkspaces();
+export const createWorkspace = (data) => api.createWorkspace(data);
+export const deleteWorkspace = (id) => api.deleteWorkspace(id);
+export const fetchUploads = (workspaceId) => api.getUploads(workspaceId);
+export const uploadDocument = (workspaceId, data) => api.uploadFile(workspaceId, data.file, data.upload_type, data.inferred_year);
+export const deleteUpload = (uploadId) => api.request(`/uploads/${uploadId}`, { method: 'DELETE' }).catch(() => api.request(`/workspaces/all/uploads/${uploadId}`, { method: 'DELETE' }));
+export const fetchPredictions = (workspaceId, params) => api.getPredictions(workspaceId, params);
+export const triggerPredictionPipeline = async (workspaceId) => {
+  await api.triggerProcessing(workspaceId);
+  const preds = await api.getPredictions(workspaceId);
+  return { status: 'completed', predictions: preds };
+};
+export const updatePredictionFeedback = (predictionId, feedback) => api.updateFeedback(predictionId, feedback);
+export const checkBackendHealth = () => api.checkHealth();

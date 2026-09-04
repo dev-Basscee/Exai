@@ -3,34 +3,113 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #070C18;
+    color: #F8FAFC;
+    -webkit-tap-highlight-color: transparent;
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-slate-950 text-slate-100 antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-color: #070C18;
+    color: #F8FAFC;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.25) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.12) 0px, transparent 40%),
+      radial-gradient(at 50% 100%, rgba(79, 70, 229, 0.15) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, .font-serif-title {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.02em;
   }
 }
 
-/* Custom scrollbar */
+/* Glassmorphism Card Utility */
+.glass-card {
+  background: rgba(15, 26, 52, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  background: rgba(19, 33, 66, 0.8);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 0 0 25px -5px rgba(6, 182, 212, 0.2);
+}
+
+/* Glass Panel Utility (Sidebar, Modals, Drawers) */
+.glass-panel {
+  background: rgba(11, 19, 38, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Glass Input Utility */
+.glass-input {
+  background: rgba(11, 19, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #F8FAFC;
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  background: rgba(15, 26, 52, 0.9);
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 15px -3px rgba(6, 182, 212, 0.3);
+  outline: none;
+}
+
+/* Custom Deep Blue / Cyan Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.2);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: rgba(56, 189, 248, 0.4);
 }
 
-/* Pulse glow animation for active processing */
-@keyframes glow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.6)); }
+/* Hide scrollbar for chip rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.animate-glow {
-  animation: glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Glass skeleton shimmer */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(15, 26, 52, 0.6) 0%,
+    rgba(30, 58, 138, 0.35) 50%,
+    rgba(15, 26, 52, 0.6) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton 1.8s infinite ease-in-out;
+}
+
+@keyframes skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

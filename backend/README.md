@@ -105,6 +105,45 @@ The interactive OpenAPI documentation is available at:
 
 ---
 
+## Moving to Supabase (PostgreSQL & Storage)
+
+ExamPredict AI supports seamless connection to **Supabase PostgreSQL** via `asyncpg`.
+
+### Step 1: Get Supabase Database Connection String
+1. Go to your **Supabase Dashboard** -> **Project Settings** -> **Database**.
+2. Under **Connection string**, select **URI**.
+3. Choose **Transaction Mode** (Port `6543`) for connection pooling, or **Session Mode / Direct** (Port `5432`).
+4. Replace `[YOUR-PASSWORD]` with your database password.
+
+### Step 2: Configure `backend/.env`
+Update `DATABASE_URL` in `backend/.env`:
+```env
+# Connection Pooling (Recommended):
+DATABASE_URL="postgresql+asyncpg://postgres.your-project-ref:your-password@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
+
+# Optional: Supabase Storage & Auth
+STORAGE_TYPE="supabase"
+SUPABASE_URL="https://your-project-ref.supabase.co"
+SUPABASE_KEY="your-anon-public-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+SUPABASE_STORAGE_BUCKET="exam-uploads"
+```
+*(Note: If your URL starts with `postgresql://` or `postgres://`, the backend automatically normalizes it to use `postgresql+asyncpg://` and configures statement caching for Supabase PgBouncer compatibility).*
+
+### Step 3: Initialize Database Schema
+You can initialize the database tables in either of two ways:
+- **Option A (Automatic)**: Simply start the backend (`uv run uvicorn app.main:app`). It will automatically create all tables and indexes.
+- **Option B (Supabase Dashboard SQL Editor)**: Open `supabase_schema.sql` (in the project root or `backend/`), copy the contents, and click **Run** in the Supabase SQL Editor.
+
+### Step 4: Migrate Existing SQLite Data to Supabase (Optional)
+If you have existing workspaces, uploads, or predictions in `exam_predict.db`:
+```powershell
+uv run python migrate_sqlite_to_supabase.py
+```
+This migrates all workspaces, uploads, extracted text, question clusters, variants, explanations, feedback, and background jobs preserving all relationships.
+
+---
+
 ## API Endpoints Reference
 
 ### Workspaces
